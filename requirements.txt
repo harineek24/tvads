@@ -12,3 +12,7 @@ pymc>=5.10.0
 arviz>=0.17.0
 shap>=0.44.0
 statsmodels>=0.14.0
+econml>=0.15.0
+mapie>=1.0.0
+pykalman>=0.9.0
+torch>=2.0.0

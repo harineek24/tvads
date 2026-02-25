@@ -1,0 +1,14 @@
+{
+  "split_conformal": {
+    "coverage": 1.0,
+    "avg_width": 137300.8234325135
+  },
+  "jackknife_plus": {
+    "coverage": 1.0,
+    "avg_width": 138554.30070295607
+  },
+  "cqr": {
+    "coverage": 0.9807692307692307,
+    "avg_width": 220088.14120986513
+  }
+}

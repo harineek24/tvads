@@ -4,13 +4,24 @@ TV Ad Attribution & Media Mix Model Dashboard
 Interactive Streamlit dashboard for analyzing TV advertising performance,
 channel attribution, budget optimization, and scenario planning.
 
-6 Tabs:
+17 Tabs:
 1. Attribution — Per-airing lift analysis with baseline vs actual
 2. Budget Optimizer — Optimal spend allocation (hero feature)
 3. Scenario Planner — What-if analysis with interactive sliders
 4. Channel Deep Dive — Adstock, saturation, and recommendations
-5. Client Report — Auto-generated executive summary + PDF export
-6. Model Diagnostics — Fit quality, residuals, limitations
+5. Bayesian MMM — PyMC MCMC with posterior ROAS and credible intervals
+6. SHAP Explainability — TreeSHAP exact Shapley values
+7. Markov Attribution — Absorbing Markov chains with removal effects
+8. Cross-Channel — TV→Search Granger causality and mediation
+9. Model Comparison — Stacked comparison of 6 attribution methods
+10. Causal ML (DML) — Double Machine Learning causal effects
+11. Transformer — Temporal Fusion Transformer with attention
+12. Conformal — Distribution-free prediction intervals
+13. Geo-Lift — Synthetic control incrementality testing
+14. CausalImpact — Bayesian structural time series
+15. Kalman Filter — Time-varying channel effectiveness
+16. Client Report — Auto-generated executive summary + PDF export
+17. Model Diagnostics — Fit quality, residuals, limitations
 """
 
 import streamlit as st
@@ -92,6 +103,45 @@ def load_data():
             data['cross_effects'] = json.load(f)
     if os.path.exists('data/model_comparison.csv'):
         data['model_comparison'] = pd.read_csv('data/model_comparison.csv')
+
+    # New advanced analysis datasets
+    if os.path.exists('data/dml_causal_effects.csv'):
+        data['dml_effects'] = pd.read_csv('data/dml_causal_effects.csv')
+    if os.path.exists('data/dml_vs_ols.csv'):
+        data['dml_vs_ols'] = pd.read_csv('data/dml_vs_ols.csv')
+    if os.path.exists('data/dml_heterogeneous_effects.csv'):
+        data['dml_het'] = pd.read_csv('data/dml_heterogeneous_effects.csv')
+    if os.path.exists('data/tft_feature_importance.csv'):
+        data['tft_importance'] = pd.read_csv('data/tft_feature_importance.csv')
+    if os.path.exists('data/tft_predictions.csv'):
+        data['tft_predictions'] = pd.read_csv('data/tft_predictions.csv')
+    if os.path.exists('models/tft_metrics.json'):
+        with open('models/tft_metrics.json', 'r') as f:
+            data['tft_metrics'] = json.load(f)
+    if os.path.exists('data/conformal_intervals.csv'):
+        data['conformal_intervals'] = pd.read_csv('data/conformal_intervals.csv')
+    if os.path.exists('data/conformal_coverage.csv'):
+        data['conformal_coverage'] = pd.read_csv('data/conformal_coverage.csv')
+    if os.path.exists('data/conformal_summary.json'):
+        with open('data/conformal_summary.json', 'r') as f:
+            data['conformal_summary'] = json.load(f)
+    if os.path.exists('data/geo_lift_results.csv'):
+        data['geo_lift'] = pd.read_csv('data/geo_lift_results.csv')
+    if os.path.exists('data/synthetic_control_weights.csv'):
+        data['sc_weights'] = pd.read_csv('data/synthetic_control_weights.csv')
+    if os.path.exists('data/geo_lift_summary.json'):
+        with open('data/geo_lift_summary.json', 'r') as f:
+            data['geo_lift_summary'] = json.load(f)
+    if os.path.exists('data/causal_impact_results.csv'):
+        data['causal_impact'] = pd.read_csv('data/causal_impact_results.csv')
+    if os.path.exists('data/causal_impact_summary.json'):
+        with open('data/causal_impact_summary.json', 'r') as f:
+            data['ci_summary'] = json.load(f)
+    if os.path.exists('data/kalman_tvp_coefficients.csv'):
+        data['kalman_coefs'] = pd.read_csv('data/kalman_tvp_coefficients.csv')
+    if os.path.exists('data/kalman_summary.json'):
+        with open('data/kalman_summary.json', 'r') as f:
+            data['kalman_summary'] = json.load(f)
 
     return data
 
@@ -183,19 +233,28 @@ st.sidebar.markdown("---")
 # TABS
 # ============================================
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11 = st.tabs([
+all_tabs = st.tabs([
     "📊 Attribution",
     "💰 Budget Optimizer",
     "🔮 Scenario Planner",
     "🔬 Channel Deep Dive",
     "🎲 Bayesian MMM",
-    "🧠 SHAP Explainability",
-    "🔗 Markov Attribution",
+    "🧠 SHAP",
+    "🔗 Markov",
     "📡 Cross-Channel",
-    "⚖️ Model Comparison",
-    "📄 Client Report",
-    "🔧 Model Diagnostics",
+    "⚖️ Comparison",
+    "🧬 Causal ML (DML)",
+    "🤖 Transformer",
+    "📐 Conformal",
+    "🌍 Geo-Lift",
+    "📈 CausalImpact",
+    "⏱️ Kalman Filter",
+    "📄 Report",
+    "🔧 Diagnostics",
 ])
+(tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9,
+ tab_dml, tab_tft, tab_conf, tab_geo, tab_ci, tab_kalman,
+ tab10, tab11) = all_tabs
 
 
 # ============================================
@@ -1259,6 +1318,306 @@ with tab9:
 
     else:
         st.info("Run `python src/model_comparison.py` to generate comparison results.")
+
+
+# ============================================
+# TAB: DOUBLE MACHINE LEARNING
+# ============================================
+
+with tab_dml:
+    st.header("Double Machine Learning (DML)")
+    st.markdown(
+        "**Debiased/orthogonal causal inference** (Chernozhukov et al., 2018). "
+        "Uses LightGBM for nuisance parameters but preserves valid statistical "
+        "inference on the treatment effect — the gold standard in causal ML."
+    )
+
+    if 'dml_effects' in data:
+        dml_df = data['dml_effects']
+
+        # Causal effect metrics
+        st.subheader("Causal Average Treatment Effects (ATE)")
+        dml_cols = st.columns(3)
+        for i, (_, row) in enumerate(dml_df.iterrows()):
+            with dml_cols[i % 3]:
+                sig_marker = " ***" if row['p_value'] < 0.01 else (" **" if row['p_value'] < 0.05 else "")
+                st.metric(
+                    row['channel'],
+                    f"${row['ate']:.3f}/$ spent",
+                    delta=f"p={row['p_value']:.4f}{sig_marker}",
+                    delta_color="off"
+                )
+
+        # DML vs OLS comparison
+        if 'dml_vs_ols' in data:
+            st.subheader("DML vs Naive OLS: Exposing Confounding Bias")
+            ols_df = data['dml_vs_ols']
+            fig = go.Figure()
+            fig.add_trace(go.Bar(x=ols_df['channel'], y=ols_df['ols_coefficient'],
+                                 name='Naive OLS (biased)', marker_color='#e74c3c', opacity=0.7))
+            fig.add_trace(go.Bar(x=ols_df['channel'], y=ols_df['dml_causal_effect'],
+                                 name='DML (debiased)', marker_color='#2980b9', opacity=0.7))
+            fig.update_layout(barmode='group', height=400,
+                              title='OLS vs DML: How Much Bias Does Confounding Introduce?',
+                              yaxis_title='Effect ($/$ spend)')
+            st.plotly_chart(fig, use_container_width=True)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if os.path.exists('results/dml_causal_effects.png'):
+                st.image('results/dml_causal_effects.png',
+                         caption='Causal Effects with 90% CIs')
+        with col2:
+            if os.path.exists('results/dml_cate_heterogeneity.png'):
+                st.image('results/dml_cate_heterogeneity.png',
+                         caption='Causal Forest: Heterogeneous Effects Over Time')
+
+    else:
+        st.info("Run `python src/double_ml.py` to generate DML results.")
+
+
+# ============================================
+# TAB: TEMPORAL FUSION TRANSFORMER
+# ============================================
+
+with tab_tft:
+    st.header("Temporal Fusion Transformer (TFT)")
+    st.markdown(
+        "**State-of-the-art deep learning** for time series (Google Research, 2021). "
+        "Includes Variable Selection Network, LSTM encoder, and Multi-Head Attention — "
+        "all providing interpretable insights into which features and past timesteps "
+        "drive predictions."
+    )
+
+    if 'tft_metrics' in data:
+        metrics = data['tft_metrics']
+
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Train R²", f"{metrics.get('train_r2', 0):.3f}")
+        with col2:
+            st.metric("Test R²", f"{metrics.get('test_r2', 0):.3f}")
+        with col3:
+            st.metric("Test MAE", f"${metrics.get('test_mae', 0):,.0f}")
+        with col4:
+            st.metric("80% PI Coverage", f"{metrics.get('coverage', 0):.0%}")
+
+        # Variable importance
+        if 'tft_importance' in data:
+            st.subheader("Variable Selection Network: Learned Feature Importance")
+            vi = data['tft_importance']
+            fig = px.bar(vi.sort_values('importance', ascending=True),
+                         x='importance', y='feature', orientation='h',
+                         color='importance', color_continuous_scale='Viridis',
+                         title='TFT Learns Which Inputs Matter (Higher = More Important)')
+            fig.update_layout(height=350, showlegend=False)
+            st.plotly_chart(fig, use_container_width=True)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if os.path.exists('results/tft_forecast.png'):
+                st.image('results/tft_forecast.png',
+                         caption='Revenue Forecast with Prediction Intervals')
+        with col2:
+            if os.path.exists('results/tft_attention_heatmap.png'):
+                st.image('results/tft_attention_heatmap.png',
+                         caption='Attention Weights & Training Convergence')
+
+        st.caption(
+            "Note: With only 52 weekly observations, the TFT overfits "
+            "(negative test R²). This demonstrates the architecture and "
+            "interpretability — real-world deployment needs more data."
+        )
+    else:
+        st.info("Run `python src/temporal_fusion.py` to generate TFT results.")
+
+
+# ============================================
+# TAB: CONFORMAL PREDICTION
+# ============================================
+
+with tab_conf:
+    st.header("Conformal Prediction")
+    st.markdown(
+        "**Distribution-free uncertainty quantification** with guaranteed finite-sample "
+        "coverage. No distributional assumptions — only exchangeability. "
+        "Based on Vovk et al. (2005), popularized by Angelopoulos & Bates (2021)."
+    )
+
+    if 'conformal_summary' in data:
+        cs = data['conformal_summary']
+
+        st.subheader("Method Comparison: 90% Prediction Intervals")
+        methods = ['split_conformal', 'jackknife_plus', 'cqr']
+        method_names = ['Split Conformal', 'Jackknife+ (Cross-Conformal)', 'CQR (Adaptive)']
+        mc = st.columns(3)
+        for i, (method, name) in enumerate(zip(methods, method_names)):
+            if method in cs:
+                with mc[i]:
+                    st.metric(f"{name}\nCoverage",
+                              f"{cs[method]['coverage']:.0%}",
+                              delta=f"Width: ${cs[method]['avg_width']:,.0f}")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if os.path.exists('results/conformal_intervals.png'):
+                st.image('results/conformal_intervals.png',
+                         caption='Three Conformal Methods Compared')
+        with col2:
+            if os.path.exists('results/conformal_coverage.png'):
+                st.image('results/conformal_coverage.png',
+                         caption='Coverage Calibration & Width Trade-off')
+
+        if os.path.exists('results/conformal_width_analysis.png'):
+            st.image('results/conformal_width_analysis.png',
+                     caption='CQR: Adaptive Intervals (Wider When Uncertain)')
+
+    else:
+        st.info("Run `python src/conformal_prediction.py` to generate conformal results.")
+
+
+# ============================================
+# TAB: GEO-LIFT / SYNTHETIC CONTROL
+# ============================================
+
+with tab_geo:
+    st.header("Geo-Lift / Synthetic Control")
+    st.markdown(
+        "**Causal incrementality testing** (Abadie et al., 2010). Constructs a synthetic "
+        "'control DMA' from weighted donor markets to estimate the true causal lift "
+        "from advertising — what Google and Meta actually use."
+    )
+
+    if 'geo_lift_summary' in data:
+        gs = data['geo_lift_summary']
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Treatment DMA", gs.get('treatment_dma', 'N/A'))
+        with col2:
+            st.metric("Causal Lift", f"{gs.get('avg_lift_pct', 0):+.1f}%")
+        with col3:
+            st.metric("Pre-Period R²", f"{gs.get('pre_r2', 0):.3f}")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if os.path.exists('results/geo_lift_main.png'):
+                st.image('results/geo_lift_main.png',
+                         caption='Synthetic Control: Actual vs Counterfactual')
+        with col2:
+            if os.path.exists('results/geo_lift_weights.png'):
+                st.image('results/geo_lift_weights.png',
+                         caption='Donor DMA Weights')
+
+        if os.path.exists('results/geo_lift_placebo.png'):
+            st.subheader("Placebo Tests: Falsification Check")
+            st.markdown(
+                "If the method is valid, placebo tests on control DMAs should show "
+                "no effect. The treatment DMA (red) should stand out."
+            )
+            st.image('results/geo_lift_placebo.png',
+                     caption='Placebo Tests Across All DMAs')
+
+    else:
+        st.info("Run `python src/geo_lift.py` to generate geo-lift results.")
+
+
+# ============================================
+# TAB: CAUSAL IMPACT (BSTS)
+# ============================================
+
+with tab_ci:
+    st.header("CausalImpact (BSTS)")
+    st.markdown(
+        "**Bayesian Structural Time Series** — Google's approach to measuring "
+        "campaign impact. Fits a model on pre-intervention data, projects a "
+        "counterfactual, and computes posterior probability of causal effect."
+    )
+
+    if 'ci_summary' in data:
+        cis = data['ci_summary']
+
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Intervention Week", cis.get('intervention_week', 'N/A'))
+        with col2:
+            st.metric("Causal Effect", f"${cis.get('causal_effect', 0):,.0f}")
+        with col3:
+            st.metric("Effect %", f"{cis.get('causal_effect_pct', 0):+.1f}%")
+        with col4:
+            st.metric("Posterior Prob", f"{cis.get('posterior_prob', 0):.0%}")
+
+        if os.path.exists('results/causal_impact_main.png'):
+            st.image('results/causal_impact_main.png',
+                     caption='CausalImpact: Original, Pointwise, and Cumulative Effects')
+
+        if os.path.exists('results/causal_impact_cumulative.png'):
+            st.image('results/causal_impact_cumulative.png',
+                     caption='TV Spend Context & Search Volume Impact')
+
+        if 'search' in cis:
+            st.subheader("TV → Brand Search Impact")
+            st.metric("Search Volume Effect", f"{cis['search']['search_effect_pct']:+.1f}%",
+                      delta=f"Posterior Prob: {cis['search']['posterior_prob']:.0%}")
+
+    else:
+        st.info("Run `python src/causal_impact.py` to generate CausalImpact results.")
+
+
+# ============================================
+# TAB: KALMAN FILTER
+# ============================================
+
+with tab_kalman:
+    st.header("Kalman Filter: Time-Varying Parameters")
+    st.markdown(
+        "**State-space model** where channel effectiveness drifts over time "
+        "as a random walk. Unlike static MMM (one coefficient per channel for the year), "
+        "the Kalman filter tracks how ROAS evolves week by week."
+    )
+
+    if 'kalman_summary' in data:
+        ks = data['kalman_summary']
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Static (Ridge) R²", f"{ks.get('static_r2', 0):.4f}")
+        with col2:
+            st.metric("Dynamic (Kalman) R²", f"{ks.get('dynamic_r2', 0):.4f}")
+        with col3:
+            st.metric("Improvement", f"+{ks.get('improvement_pp', 0):.2f} pp")
+
+        if os.path.exists('results/kalman_tvp_coefficients.png'):
+            st.image('results/kalman_tvp_coefficients.png',
+                     caption='Time-Varying Coefficients (Shaded = 95% CI, Dashed = Static)')
+
+        if os.path.exists('results/kalman_tvp_roas_evolution.png'):
+            st.image('results/kalman_tvp_roas_evolution.png',
+                     caption='How Channel Effectiveness Evolves Over Time')
+
+        if os.path.exists('results/kalman_vs_static.png'):
+            st.image('results/kalman_vs_static.png',
+                     caption='Static vs Dynamic: Prediction & Residuals')
+
+        # Interactive coefficient chart
+        if 'kalman_coefs' in data:
+            st.subheader("Interactive: Time-Varying Coefficients")
+            kc = data['kalman_coefs']
+            channels = [c for c in kc.columns if c != 'week']
+            fig = go.Figure()
+            for ch in channels:
+                fig.add_trace(go.Scatter(
+                    x=kc['week'], y=kc[ch], mode='lines',
+                    name=ch, line=dict(width=2),
+                ))
+            fig.update_layout(
+                title='Channel Effectiveness Over Time (Kalman Smoothed)',
+                xaxis_title='Week', yaxis_title='Coefficient',
+                height=400, hovermode='x unified')
+            st.plotly_chart(fig, use_container_width=True)
+
+    else:
+        st.info("Run `python src/kalman_tvp.py` to generate Kalman filter results.")
 
 
 # ============================================

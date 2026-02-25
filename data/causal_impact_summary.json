@@ -1,0 +1,15 @@
+{
+  "intervention_week": 39,
+  "pre_r2": 0.19218689521869603,
+  "post_actual": 10702658.719999999,
+  "post_counterfactual": 10715407.621509677,
+  "causal_effect": -12748.901509677991,
+  "causal_effect_pct": -0.1189772891521771,
+  "posterior_prob": 0.501,
+  "avg_weekly_effect": -980.6847315136916,
+  "search": {
+    "search_effect": 260183.48473315174,
+    "search_effect_pct": 17.422485746121612,
+    "posterior_prob": 1.0
+  }
+}
