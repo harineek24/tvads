@@ -1,0 +1,81 @@
+{
+  "adstock_decays": {
+    "tv_broadcast_spend": 0.7,
+    "tv_cable_spend": 0.7,
+    "tv_streaming_spend": 0.65,
+    "paid_search_spend": 0.25,
+    "social_spend": 0.6,
+    "display_spend": 0.1
+  },
+  "hill_params": {
+    "tv_broadcast_spend": {
+      "alpha": 2.0,
+      "K": 719388.98
+    },
+    "tv_cable_spend": {
+      "alpha": 2.0,
+      "K": 185560.57
+    },
+    "tv_streaming_spend": {
+      "alpha": 2.0,
+      "K": 66500.52
+    },
+    "paid_search_spend": {
+      "alpha": 2.0,
+      "K": 15161.35
+    },
+    "social_spend": {
+      "alpha": 2.0,
+      "K": 114808.34
+    },
+    "display_spend": {
+      "alpha": 2.0,
+      "K": 24944.2
+    }
+  },
+  "feature_columns": [
+    "tv_broadcast_spend",
+    "tv_cable_spend",
+    "tv_streaming_spend",
+    "paid_search_spend",
+    "social_spend",
+    "display_spend",
+    "month_sin",
+    "month_cos",
+    "trend"
+  ],
+  "spend_columns": [
+    "tv_broadcast_spend",
+    "tv_cable_spend",
+    "tv_streaming_spend",
+    "paid_search_spend",
+    "social_spend",
+    "display_spend"
+  ],
+  "channel_names": {
+    "tv_broadcast_spend": "TV Broadcast",
+    "tv_cable_spend": "TV Cable",
+    "tv_streaming_spend": "TV Streaming",
+    "paid_search_spend": "Paid Search",
+    "social_spend": "Social",
+    "display_spend": "Display"
+  },
+  "r2": 0.8960316841090609,
+  "mape": 0.021945633154300828,
+  "marginal_rois": {
+    "TV Broadcast": 0.251,
+    "TV Cable": -0.195,
+    "TV Streaming": -1.177,
+    "Paid Search": 7.679,
+    "Social": 2.271,
+    "Display": 0.905
+  },
+  "saturation_levels": {
+    "TV Broadcast": 1.2,
+    "TV Cable": 7.3,
+    "TV Streaming": 4.4,
+    "Paid Search": 93.4,
+    "Social": 12.2,
+    "Display": 54.5
+  }
+}
