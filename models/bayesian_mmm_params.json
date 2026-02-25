@@ -1,0 +1,11 @@
+{
+  "adstock_decays": {
+    "TV Broadcast": 0.7000000000000002,
+    "TV Cable": 0.7000000000000002,
+    "TV Streaming": 0.6500000000000001,
+    "Paid Search": 0.25000000000000006,
+    "Social": 0.6000000000000002,
+    "Display": 0.1
+  },
+  "revenue_scale": 786316.2223076922
+}

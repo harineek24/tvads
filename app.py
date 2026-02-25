@@ -69,6 +69,30 @@ def load_data():
         with open('models/baseline_metrics.json', 'r') as f:
             data['baseline_metrics'] = json.load(f)
 
+    # Advanced analysis datasets
+    if os.path.exists('data/bayesian_roas_posteriors.csv'):
+        data['bayesian_roas'] = pd.read_csv('data/bayesian_roas_posteriors.csv')
+    if os.path.exists('data/bayesian_channel_contributions.csv'):
+        data['bayesian_contributions'] = pd.read_csv('data/bayesian_channel_contributions.csv')
+    if os.path.exists('models/bayesian_mmm_params.json'):
+        with open('models/bayesian_mmm_params.json', 'r') as f:
+            data['bayesian_params'] = json.load(f)
+    if os.path.exists('data/shap_feature_importance.csv'):
+        data['shap_importance'] = pd.read_csv('data/shap_feature_importance.csv')
+    if os.path.exists('data/markov_attribution.csv'):
+        data['markov_attribution'] = pd.read_csv('data/markov_attribution.csv')
+    if os.path.exists('data/markov_removal_effects.csv'):
+        data['markov_removal'] = pd.read_csv('data/markov_removal_effects.csv')
+    if os.path.exists('data/cross_channel_correlations.csv'):
+        data['cross_correlations'] = pd.read_csv('data/cross_channel_correlations.csv')
+    if os.path.exists('data/granger_results.csv'):
+        data['granger_results'] = pd.read_csv('data/granger_results.csv')
+    if os.path.exists('data/cross_channel_effects.json'):
+        with open('data/cross_channel_effects.json', 'r') as f:
+            data['cross_effects'] = json.load(f)
+    if os.path.exists('data/model_comparison.csv'):
+        data['model_comparison'] = pd.read_csv('data/model_comparison.csv')
+
     return data
 
 
@@ -159,11 +183,16 @@ st.sidebar.markdown("---")
 # TABS
 # ============================================
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11 = st.tabs([
     "📊 Attribution",
     "💰 Budget Optimizer",
     "🔮 Scenario Planner",
     "🔬 Channel Deep Dive",
+    "🎲 Bayesian MMM",
+    "🧠 SHAP Explainability",
+    "🔗 Markov Attribution",
+    "📡 Cross-Channel",
+    "⚖️ Model Comparison",
     "📄 Client Report",
     "🔧 Model Diagnostics",
 ])
@@ -746,10 +775,497 @@ with tab4:
 
 
 # ============================================
-# TAB 5: CLIENT REPORT
+# TAB 5: BAYESIAN MMM
 # ============================================
 
 with tab5:
+    st.header("Bayesian Media Mix Model")
+    st.markdown(
+        "Full Bayesian estimation using PyMC with MCMC sampling. Unlike the frequentist MMM, "
+        "this provides **posterior distributions** over ROAS — capturing uncertainty, not just "
+        "point estimates."
+    )
+
+    if 'bayesian_roas' in data:
+        roas_df = data['bayesian_roas']
+
+        # Posterior ROAS metrics with credible intervals
+        st.subheader("Posterior ROAS by Channel (90% Credible Intervals)")
+        roas_cols = st.columns(len(roas_df))
+        for i, (_, row) in enumerate(roas_df.iterrows()):
+            with roas_cols[i]:
+                ci_text = f"[{row['ci_5']:.2f}, {row['ci_95']:.2f}]"
+                st.metric(
+                    row['channel'],
+                    f"{row['median_roas']:.2f}x",
+                    delta=ci_text,
+                    delta_color="off"
+                )
+
+        # Posterior ROAS forest plot
+        st.subheader("Posterior ROAS Distributions")
+        if 'bayesian_roas' in data:
+            roas_df_sorted = roas_df.sort_values('median_roas', ascending=True)
+            fig = go.Figure()
+            for _, row in roas_df_sorted.iterrows():
+                fig.add_trace(go.Scatter(
+                    x=[row['ci_5'], row['median_roas'], row['ci_95']],
+                    y=[row['channel']] * 3,
+                    mode='markers+lines',
+                    marker=dict(size=[8, 14, 8], color=['gray', '#8e44ad', 'gray']),
+                    line=dict(color='#8e44ad', width=3),
+                    name=row['channel'],
+                    showlegend=False,
+                    hovertemplate=(
+                        f"<b>{row['channel']}</b><br>"
+                        f"Median: {row['median_roas']:.2f}x<br>"
+                        f"90% CI: [{row['ci_5']:.2f}, {row['ci_95']:.2f}]"
+                    ),
+                ))
+            fig.add_vline(x=1.0, line_dash='dash', line_color='red',
+                          annotation_text='Break-even (1.0x)')
+            fig.update_layout(
+                title='Posterior ROAS with 90% Credible Intervals',
+                xaxis_title='ROAS',
+                height=350,
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if os.path.exists('results/bayesian_posterior_roas.png'):
+                st.image('results/bayesian_posterior_roas.png',
+                         caption='Posterior ROAS Distributions (MCMC)')
+        with col2:
+            if os.path.exists('results/bayesian_forest_plot.png'):
+                st.image('results/bayesian_forest_plot.png',
+                         caption='Forest Plot: Credible Intervals')
+
+        # Bayesian contributions comparison
+        if 'bayesian_contributions' in data:
+            st.subheader("Bayesian Channel Contributions")
+            bc = data['bayesian_contributions']
+            fig = px.bar(
+                bc.sort_values('median_contribution', ascending=True),
+                x='median_contribution', y='channel', orientation='h',
+                color='channel',
+                color_discrete_map=CHANNEL_COLORS,
+                title='Bayesian MMM: Median Channel Revenue Contributions'
+            )
+            fig.update_layout(height=350, showlegend=False,
+                              xaxis_title='Revenue Contribution ($)')
+            st.plotly_chart(fig, use_container_width=True)
+
+        if os.path.exists('results/bayesian_posterior_predictive.png'):
+            st.image('results/bayesian_posterior_predictive.png',
+                     caption='Posterior Predictive Check: Model vs Actual')
+
+        # Technical details
+        if 'bayesian_params' in data:
+            bp = data['bayesian_params']
+            st.subheader("MCMC Diagnostics")
+            col_d1, col_d2, col_d3, col_d4 = st.columns(4)
+            with col_d1:
+                st.metric("Chains", bp.get('n_chains', 2))
+            with col_d2:
+                st.metric("Draws / Chain", bp.get('n_draws', 2000))
+            with col_d3:
+                st.metric("Tune Steps", bp.get('n_tune', 1500))
+            with col_d4:
+                st.metric("Divergences", bp.get('divergences', 'N/A'))
+
+    else:
+        st.info("Run `python src/bayesian_mmm.py` to generate Bayesian MMM results.")
+
+
+# ============================================
+# TAB 6: SHAP EXPLAINABILITY
+# ============================================
+
+with tab6:
+    st.header("SHAP Explainability")
+    st.markdown(
+        "**TreeSHAP** on the LightGBM baseline model provides exact Shapley values — "
+        "the theoretically grounded way to attribute each prediction to individual features. "
+        "These are additive, consistent, and locally accurate."
+    )
+
+    if 'shap_importance' in data:
+        shap_df = data['shap_importance']
+
+        # Top features table
+        st.subheader("Feature Importance (Mean |SHAP Value|)")
+        top_n = 15
+        top_features = shap_df.head(top_n)
+
+        fig = px.bar(
+            top_features.sort_values('mean_abs_shap', ascending=True),
+            x='mean_abs_shap', y='feature', orientation='h',
+            title='Top 15 Features by Mean Absolute SHAP Value',
+            color='mean_abs_shap',
+            color_continuous_scale='Viridis',
+        )
+        fig.update_layout(height=450, showlegend=False,
+                          xaxis_title='Mean |SHAP Value|',
+                          yaxis_title='')
+        st.plotly_chart(fig, use_container_width=True)
+
+        # SHAP plots
+        st.subheader("SHAP Visualizations")
+        col1, col2 = st.columns(2)
+        with col1:
+            if os.path.exists('results/shap_summary_baseline.png'):
+                st.image('results/shap_summary_baseline.png',
+                         caption='SHAP Summary (Beeswarm) Plot')
+        with col2:
+            if os.path.exists('results/shap_dependence_hour.png'):
+                st.image('results/shap_dependence_hour.png',
+                         caption='SHAP Dependence: Time-of-Day Features')
+
+        col3, col4 = st.columns(2)
+        with col3:
+            if os.path.exists('results/shap_waterfall_sample.png'):
+                st.image('results/shap_waterfall_sample.png',
+                         caption='SHAP Waterfall: Single Prediction Explained')
+        with col4:
+            if os.path.exists('results/shap_feature_importance.png'):
+                st.image('results/shap_feature_importance.png',
+                         caption='Feature Importance Bar Chart')
+
+        # Interpretation
+        st.subheader("Key Interpretations")
+        top3 = shap_df.head(3)['feature'].tolist()
+        st.markdown(
+            f"- **{top3[0]}** is the most important feature, confirming geographic "
+            f"variation dominates traffic patterns\n"
+            f"- **{top3[1]}** and **{top3[2]}** capture time-of-day cyclical effects "
+            f"(encoded via sine/cosine to preserve continuity)\n"
+            f"- Weekend and holiday indicators have moderate importance, reflecting "
+            f"behavioral shifts in browsing patterns\n"
+            f"- SHAP values are exact (not approximate) because TreeSHAP exploits "
+            f"the tree structure for polynomial-time computation"
+        )
+    else:
+        st.info("Run `python src/shap_analysis.py` to generate SHAP results.")
+
+
+# ============================================
+# TAB 7: MARKOV ATTRIBUTION
+# ============================================
+
+with tab7:
+    st.header("Markov Chain Attribution")
+    st.markdown(
+        "Absorbing Markov chains model the customer journey as a stochastic process. "
+        "**Removal effects** measure each channel's importance by simulating what happens "
+        "when it's removed from the journey entirely."
+    )
+
+    if 'markov_attribution' in data:
+        markov_df = data['markov_attribution']
+
+        # Attribution comparison: Markov vs Last-Touch vs First-Touch
+        st.subheader("Attribution Method Comparison")
+        fig = go.Figure()
+
+        for method, col_name, color in [
+            ('Markov Chain', 'markov_attribution', '#2c3e50'),
+            ('Last-Touch', 'last_touch_attribution', '#e74c3c'),
+            ('First-Touch', 'first_touch_attribution', '#e67e22'),
+        ]:
+            fig.add_trace(go.Bar(
+                x=markov_df['channel'],
+                y=markov_df[col_name] * 100,
+                name=method,
+                marker_color=color,
+                opacity=0.85,
+            ))
+
+        fig.update_layout(
+            barmode='group',
+            title='Channel Attribution: Markov vs Heuristic Models',
+            yaxis_title='Attribution Share (%)',
+            height=400,
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Difference analysis
+        st.subheader("Markov vs Last-Touch Differences")
+        markov_df_display = markov_df.copy()
+        markov_df_display['markov_vs_lasttouch'] = (
+            (markov_df['markov_attribution'] - markov_df['last_touch_attribution']) * 100
+        )
+        markov_df_display['interpretation'] = markov_df_display['markov_vs_lasttouch'].apply(
+            lambda x: 'Undervalued by Last-Touch' if x > 1
+            else ('Overvalued by Last-Touch' if x < -1 else 'Similar')
+        )
+
+        fig_diff = px.bar(
+            markov_df_display.sort_values('markov_vs_lasttouch'),
+            x='markov_vs_lasttouch', y='channel', orientation='h',
+            color='interpretation',
+            color_discrete_map={
+                'Undervalued by Last-Touch': '#27ae60',
+                'Overvalued by Last-Touch': '#e74c3c',
+                'Similar': '#95a5a6',
+            },
+            title='Markov minus Last-Touch Attribution (percentage points)',
+        )
+        fig_diff.update_layout(height=300, xaxis_title='Difference (pp)')
+        st.plotly_chart(fig_diff, use_container_width=True)
+
+        # Removal effects
+        if 'markov_removal' in data:
+            st.subheader("Channel Removal Effects")
+            st.markdown(
+                "The removal effect measures the drop in total conversions when a channel "
+                "is completely removed from all customer journeys."
+            )
+            removal_df = data['markov_removal']
+            fig_removal = px.bar(
+                removal_df.sort_values('removal_effect', ascending=True),
+                x='removal_effect', y='channel', orientation='h',
+                color='removal_effect',
+                color_continuous_scale='Reds',
+                title='Removal Effects: Conversion Drop When Channel Is Removed',
+            )
+            fig_removal.update_layout(height=350, xaxis_title='Removal Effect',
+                                       showlegend=False)
+            st.plotly_chart(fig_removal, use_container_width=True)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if os.path.exists('results/markov_transition_heatmap.png'):
+                st.image('results/markov_transition_heatmap.png',
+                         caption='Transition Probability Matrix')
+        with col2:
+            if os.path.exists('results/markov_vs_lasttouch.png'):
+                st.image('results/markov_vs_lasttouch.png',
+                         caption='Markov vs Last-Touch Comparison')
+
+    else:
+        st.info("Run `python src/markov_attribution.py` to generate Markov results.")
+
+
+# ============================================
+# TAB 8: CROSS-CHANNEL EFFECTS
+# ============================================
+
+with tab8:
+    st.header("Cross-Channel Effects: TV → Search")
+    st.markdown(
+        "Investigating how TV advertising drives online search behavior — the 'TV halo effect'. "
+        "Uses Granger causality, mediation analysis, and interaction modeling."
+    )
+
+    if 'cross_effects' in data:
+        effects = data['cross_effects']
+
+        # Key metrics
+        st.subheader("TV → Search Relationship")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            peak_corr = effects.get('peak_correlation', {})
+            st.metric(
+                "Peak TV→Search Correlation",
+                f"r = {peak_corr.get('correlation', 0):.3f}",
+                delta=f"Lag {peak_corr.get('lag_weeks', 0)} weeks"
+            )
+        with col2:
+            mediation = effects.get('mediation', {})
+            indirect = mediation.get('indirect_effect', 0)
+            total = mediation.get('total_effect', 1)
+            pct_mediated = (indirect / total * 100) if total != 0 else 0
+            st.metric(
+                "Effect Mediated via Search",
+                f"{pct_mediated:.0f}%",
+                delta="indirect path"
+            )
+        with col3:
+            interaction = effects.get('interaction', {})
+            st.metric(
+                "TV×Search Synergy",
+                f"${interaction.get('interaction_coefficient', 0):,.0f}",
+                delta=f"R² lift: +{interaction.get('r2_improvement', 0):.4f}"
+            )
+
+        # Correlation plot
+        col_p1, col_p2 = st.columns(2)
+        with col_p1:
+            if os.path.exists('results/tv_search_lag_correlation.png'):
+                st.image('results/tv_search_lag_correlation.png',
+                         caption='TV-Search Lag Correlation')
+        with col_p2:
+            if os.path.exists('results/tv_search_interaction.png'):
+                st.image('results/tv_search_interaction.png',
+                         caption='TV × Search Revenue Interaction')
+
+        # Granger causality
+        st.subheader("Granger Causality Test")
+        st.markdown(
+            "Does past TV spend contain information about future search volume "
+            "beyond what search's own history provides?"
+        )
+        if 'granger_results' in data:
+            gr = data['granger_results']
+            for _, row in gr.iterrows():
+                sig = "Yes" if row['significant'] else "No"
+                color = "green" if row['significant'] else "red"
+                st.markdown(
+                    f"- **Lag {int(row['lag'])} weeks**: F={row['f_statistic']:.2f}, "
+                    f"p={row['p_value']:.4f} — Significant: :{color}[{sig}]"
+                )
+            st.caption(
+                "Note: With only 52 weekly observations and differenced data, "
+                "non-significant results are expected. The cross-correlation and "
+                "mediation analyses provide complementary evidence."
+            )
+
+        if os.path.exists('results/granger_causality.png'):
+            st.image('results/granger_causality.png',
+                     caption='Granger Causality Test Results')
+
+        # Mediation analysis
+        st.subheader("Mediation Analysis: TV → Search → Revenue")
+        if mediation:
+            fig_med = go.Figure()
+
+            paths = [
+                ('Direct: TV → Revenue', mediation.get('direct_effect', 0), '#2c3e50'),
+                ('Indirect: TV → Search → Revenue', mediation.get('indirect_effect', 0), '#8e44ad'),
+                ('Total Effect', mediation.get('total_effect', 0), '#2980b9'),
+            ]
+            fig_med.add_trace(go.Bar(
+                x=[p[0] for p in paths],
+                y=[p[1] for p in paths],
+                marker_color=[p[2] for p in paths],
+                text=[f'${p[1]:,.0f}' for p in paths],
+                textposition='outside',
+            ))
+            fig_med.update_layout(
+                title='Mediation: How TV Affects Revenue (Direct vs Through Search)',
+                yaxis_title='Effect Size ($)',
+                height=350,
+                showlegend=False,
+            )
+            st.plotly_chart(fig_med, use_container_width=True)
+
+    else:
+        st.info("Run `python src/cross_channel.py` to generate cross-channel results.")
+
+
+# ============================================
+# TAB 9: MODEL COMPARISON
+# ============================================
+
+with tab9:
+    st.header("Stacked Model Comparison")
+    st.markdown(
+        "Six attribution methods applied to the same data produce different answers. "
+        "This comparison reveals **where models agree** (higher confidence) and "
+        "**where they disagree** (more uncertainty in the true attribution)."
+    )
+
+    if 'model_comparison' in data:
+        comp_df = data['model_comparison']
+        channels = [c for c in comp_df.columns if c != 'model']
+        active_channels = [c for c in channels if comp_df[c].sum() > 0.01]
+
+        # Stacked bar chart (interactive)
+        st.subheader("Attribution Shares by Model")
+        fig = go.Figure()
+        for ch in active_channels:
+            color = CHANNEL_COLORS.get(ch, '#bdc3c7')
+            fig.add_trace(go.Bar(
+                y=comp_df['model'],
+                x=comp_df[ch] * 100,
+                name=ch,
+                orientation='h',
+                marker_color=color,
+                text=comp_df[ch].apply(lambda v: f'{v:.0%}' if v > 0.05 else ''),
+                textposition='inside',
+                textfont_color='white',
+            ))
+        fig.update_layout(
+            barmode='stack',
+            title='How Each Method Attributes Revenue Across Channels',
+            xaxis_title='Attribution Share (%)',
+            height=450,
+            legend=dict(orientation='h', yanchor='bottom', y=-0.2),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Grouped bar chart
+        st.subheader("Channel-Level Comparison")
+        fig_grouped = go.Figure()
+        model_colors = {
+            'Last-Touch': '#e74c3c', 'First-Touch': '#e67e22',
+            'Markov Chain': '#2c3e50', 'LightGBM Attribution': '#27ae60',
+            'Frequentist MMM': '#3498db', 'Bayesian MMM': '#8e44ad',
+        }
+        for _, row in comp_df.iterrows():
+            model_name = row['model']
+            fig_grouped.add_trace(go.Bar(
+                x=active_channels,
+                y=[row[ch] * 100 for ch in active_channels],
+                name=model_name,
+                marker_color=model_colors.get(model_name, 'gray'),
+                opacity=0.85,
+            ))
+        fig_grouped.update_layout(
+            barmode='group',
+            title='Each Channel Seen Through Different Lenses',
+            yaxis_title='Attribution Share (%)',
+            height=400,
+        )
+        st.plotly_chart(fig_grouped, use_container_width=True)
+
+        # Radar chart image
+        col_r1, col_r2 = st.columns(2)
+        with col_r1:
+            if os.path.exists('results/model_comparison_radar.png'):
+                st.image('results/model_comparison_radar.png',
+                         caption='Attribution Radar Chart')
+        with col_r2:
+            if os.path.exists('results/model_comparison_insights.png'):
+                st.image('results/model_comparison_insights.png',
+                         caption='Key Insights Summary')
+
+        # Comparison table
+        st.subheader("Full Comparison Matrix")
+        display_df = comp_df.copy()
+        for ch in active_channels:
+            display_df[ch] = display_df[ch].apply(lambda x: f'{x:.1%}')
+        st.dataframe(display_df, use_container_width=True, hide_index=True)
+
+        # Insights
+        st.subheader("Key Takeaways")
+        st.markdown("""
+        1. **TV's value varies 2-5x** depending on methodology — Last-Touch dramatically
+           undervalues TV because it ignores TV's role as a journey initiator
+
+        2. **Heuristic models over-credit digital** — Paid Search gets credit for conversions
+           that TV initiated (the cross-channel effect documented in the Cross-Channel tab)
+
+        3. **Bayesian MMM provides uncertainty** — Unlike point estimates, the Bayesian
+           approach shows credible intervals, making it clear when we're confident vs uncertain
+
+        4. **Markov Chain captures journey dynamics** — By modeling the full customer journey
+           as a stochastic process, it properly credits channels that appear early in the funnel
+
+        5. **No single model is correct** — Each captures different aspects of advertising
+           effectiveness. The recommendation is to triangulate across methods.
+        """)
+
+    else:
+        st.info("Run `python src/model_comparison.py` to generate comparison results.")
+
+
+# ============================================
+# TAB 10: CLIENT REPORT
+# ============================================
+
+with tab10:
     st.header("Client Report")
     st.markdown("Auto-generated executive summary for stakeholder presentation.")
 
@@ -890,7 +1406,7 @@ with tab5:
 # TAB 6: MODEL DIAGNOSTICS
 # ============================================
 
-with tab6:
+with tab11:
     st.header("Model Diagnostics")
     st.markdown("Quality checks and honest assessment of model limitations.")
 

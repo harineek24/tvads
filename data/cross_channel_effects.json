@@ -1,0 +1,114 @@
+{
+  "cross_correlations": [
+    {
+      "lag": -8,
+      "tv_search_correlation": 0.4519,
+      "tv_revenue_correlation": -0.3113
+    },
+    {
+      "lag": -7,
+      "tv_search_correlation": 0.4,
+      "tv_revenue_correlation": -0.2101
+    },
+    {
+      "lag": -6,
+      "tv_search_correlation": 0.3409,
+      "tv_revenue_correlation": -0.0984
+    },
+    {
+      "lag": -5,
+      "tv_search_correlation": 0.5616,
+      "tv_revenue_correlation": 0.0832
+    },
+    {
+      "lag": -4,
+      "tv_search_correlation": 0.6366,
+      "tv_revenue_correlation": 0.1892
+    },
+    {
+      "lag": -3,
+      "tv_search_correlation": 0.5233,
+      "tv_revenue_correlation": 0.1609
+    },
+    {
+      "lag": -2,
+      "tv_search_correlation": 0.5122,
+      "tv_revenue_correlation": 0.1905
+    },
+    {
+      "lag": -1,
+      "tv_search_correlation": 0.6981,
+      "tv_revenue_correlation": 0.3409
+    },
+    {
+      "lag": 0,
+      "tv_search_correlation": 0.8828,
+      "tv_revenue_correlation": 0.4915
+    },
+    {
+      "lag": 1,
+      "tv_search_correlation": 0.6227,
+      "tv_revenue_correlation": 0.5014
+    },
+    {
+      "lag": 2,
+      "tv_search_correlation": 0.4715,
+      "tv_revenue_correlation": 0.5162
+    },
+    {
+      "lag": 3,
+      "tv_search_correlation": 0.5142,
+      "tv_revenue_correlation": 0.5779
+    },
+    {
+      "lag": 4,
+      "tv_search_correlation": 0.5527,
+      "tv_revenue_correlation": 0.6855
+    },
+    {
+      "lag": 5,
+      "tv_search_correlation": 0.4339,
+      "tv_revenue_correlation": 0.6595
+    },
+    {
+      "lag": 6,
+      "tv_search_correlation": 0.2136,
+      "tv_revenue_correlation": 0.607
+    },
+    {
+      "lag": 7,
+      "tv_search_correlation": 0.291,
+      "tv_revenue_correlation": 0.539
+    },
+    {
+      "lag": 8,
+      "tv_search_correlation": 0.3268,
+      "tv_revenue_correlation": 0.569
+    }
+  ],
+  "interaction_model": {
+    "r2_base": 0.8557,
+    "r2_interaction": 0.8558,
+    "r2_improvement": 0.0001,
+    "interaction_coefficient": 2458.92,
+    "synergy_pct": 510.6,
+    "coefficients": {
+      "TV": -2980.36,
+      "Paid Search": 3461.96,
+      "Social": 15736.26,
+      "Display": 6244.73,
+      "TV \u00d7 Search": 2458.92,
+      "month_sin": 59122.8,
+      "month_cos": 26478.71,
+      "trend": 20256.36
+    }
+  },
+  "mediation": {
+    "total_effect": 0.02,
+    "direct_effect": -0.22,
+    "indirect_effect": 0.24,
+    "mediation_pct": 1453.0,
+    "path_a_tv_to_search": 0.3184,
+    "path_b_search_to_revenue": 0.76
+  }
+}

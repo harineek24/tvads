@@ -1,0 +1,13 @@
+test,lag,f_statistic,p_value,significant
+TV → Search,1,0.9053,0.3462,False
+TV → Search,2,0.1474,0.8633,False
+TV → Search,3,0.0825,0.9692,False
+TV → Search,4,0.053,0.9945,False
+TV → Revenue,1,0.4585,0.5016,False
+TV → Revenue,2,0.3078,0.7366,False
+TV → Revenue,3,0.6004,0.6184,False
+TV → Revenue,4,1.1749,0.3373,False
+TV → Paid Search Spend,1,0.051,0.8222,False
+TV → Paid Search Spend,2,2.3294,0.1092,False
+TV → Paid Search Spend,3,0.9378,0.4312,False
+TV → Paid Search Spend,4,1.6345,0.1856,False
