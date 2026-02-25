@@ -43,6 +43,8 @@ def load_data():
         "shapley_values": "data/shapley_values.csv",
         "shapley_interactions": "data/shapley_interactions.csv",
         "shapley_asymmetric": "data/shapley_asymmetric.csv",
+        "markov_attribution": "data/markov_attribution.csv",
+        "markov_removal": "data/markov_removal_effects.csv",
         "deep_causal_dag": "data/deep_causal_dag.csv",
         "deep_causal_adstock": "data/deep_causal_adstock.csv",
         "deep_causal_contributions": "data/deep_causal_contributions.csv",
@@ -107,6 +109,7 @@ st.sidebar.markdown("---")
 PAGES = {
     "Overview": "overview",
     "Bayesian MMM": "bayesian",
+    "Markov Chains": "markov",
     "Shapley Attribution": "shapley",
     "DeepCausalMMM": "deep_causal",
     "Double ML (DML)": "dml",
@@ -118,7 +121,7 @@ PAGES = {
 }
 
 SECTIONS = {
-    "Core Models": ["Overview", "Bayesian MMM", "Shapley Attribution", "DeepCausalMMM"],
+    "Core Models": ["Overview", "Bayesian MMM", "Markov Chains", "Shapley Attribution", "DeepCausalMMM"],
     "Causal ML": ["Double ML (DML)", "Transformer (TFT)", "Conformal Prediction", "Geo-Lift"],
     "Synthesis": ["Model Comparison", "How It Works"],
 }
@@ -136,7 +139,7 @@ if "page" not in st.session_state:
 page = st.session_state["page"]
 
 st.sidebar.markdown("---")
-st.sidebar.caption("DTC Brand | $15M Annual | 52 Weeks | 8 DMAs | 7 Models")
+st.sidebar.caption("DTC Brand | $15M Annual | 52 Weeks | 8 DMAs | 8 Models")
 
 
 # ============================================
@@ -146,9 +149,9 @@ st.sidebar.caption("DTC Brand | $15M Annual | 52 Weeks | 8 DMAs | 7 Models")
 if page == "overview":
     st.title("TV Ad Attribution & Advanced Causal ML")
     st.markdown(
-        "A cutting-edge marketing analytics platform with **7 advanced statistical and ML models** "
-        "measuring TV advertising effectiveness. No simple heuristics -- every model here uses "
-        "**causal inference, Bayesian uncertainty, or deep learning**."
+        "A marketing analytics platform with **8 statistical and ML models** "
+        "measuring TV advertising effectiveness -- from intuitive journey models "
+        "to cutting-edge causal ML and deep learning."
     )
 
     total_tv = ws['tv_broadcast_spend'].sum() + ws['tv_cable_spend'].sum() + ws['tv_streaming_spend'].sum()
@@ -159,31 +162,32 @@ if page == "overview":
     c1.metric("Total Revenue", format_currency(total_rev))
     c2.metric("Total Ad Spend", format_currency(total_spend))
     c3.metric("TV Share of Spend", "{:.0f}%".format(total_tv / total_spend * 100))
-    c4.metric("Advanced Models", "7")
+    c4.metric("Models Built", "8")
 
     st.markdown("---")
 
-    st.subheader("The 7 Models")
+    st.subheader("The 8 Models")
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("""
 **Core Models**
-- **Bayesian MMM** -- PyMC MCMC with causal DAG identification + experiment calibration (Google Meridian / PyMC-Marketing style)
-- **Shapley Attribution** -- Exact game-theoretic fair attribution across 64 coalitions with interaction indices
-- **DeepCausalMMM** -- Neural network (GRU) learns adstock patterns + DAG structure learning discovers channel causality
+- **Bayesian MMM** -- How much revenue does each channel drive? (with uncertainty)
+- **Markov Chains** -- How do customers move through the ad journey?
+- **Shapley Attribution** -- What's the fairest way to split credit?
+- **DeepCausalMMM** -- Can a neural network learn advertising effects automatically?
 
 **Causal ML**
-- **Double ML** -- Debiased causal effects via Chernozhukov et al. (2018) with CausalForest heterogeneity
+- **Double ML** -- What's the TRUE causal effect, removing confounding bias?
         """)
     with col2:
         st.markdown("""
 **Causal ML (continued)**
-- **Transformer (TFT)** -- Temporal Fusion Transformer with learned variable selection and multi-head attention
-- **Conformal Prediction** -- Distribution-free uncertainty with guaranteed coverage (Split, Jackknife+, CQR)
-- **Geo-Lift** -- Synthetic control incrementality testing with placebo falsification
+- **Transformer (TFT)** -- Can deep learning forecast revenue from ad spend?
+- **Conformal Prediction** -- How confident should we be in our predictions?
+- **Geo-Lift** -- If we turned off TV ads in one city, what would happen?
 
 **Synthesis**
-- **Model Comparison** -- All 7 methods side-by-side: where they agree = confidence, where they disagree = uncertainty
+- **Model Comparison** -- All 8 methods side-by-side on the same data
         """)
 
     st.markdown("---")
@@ -319,6 +323,67 @@ elif page == "bayesian":
                 st.metric("Channels Within CI",
                           "{}/{}".format(cal_info.get("n_within_ci", 0),
                                          cal_info.get("n_channels", 0)))
+
+
+# ============================================
+# PAGE: MARKOV CHAINS
+# ============================================
+
+elif page == "markov":
+    st.title("Markov Chain Attribution")
+    st.markdown(
+        "Models the customer journey as a **step-by-step path** through marketing touchpoints. "
+        "Instead of giving all credit to the last ad someone saw, Markov chains ask: "
+        '"if we removed this channel entirely, how many fewer conversions would we get?"'
+    )
+
+    if "markov_attribution" in data:
+        markov_df = data["markov_attribution"]
+
+        st.subheader("Attribution: Markov vs Last-Touch vs First-Touch")
+        fig = go.Figure()
+        for method, col_name, color in [("Markov Chain", "markov_attribution", "#2c3e50"),
+                                         ("Last-Touch", "last_touch_attribution", "#e74c3c"),
+                                         ("First-Touch", "first_touch_attribution", "#e67e22")]:
+            fig.add_trace(go.Bar(x=markov_df["channel"], y=markov_df[col_name] * 100,
+                                 name=method, marker_color=color, opacity=0.85))
+        fig.update_layout(barmode="group",
+                          title="Who Gets Credit? Three Different Answers",
+                          yaxis_title="Attribution Share (%)", height=400)
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.markdown("""
+        **Why does this matter?**
+        - **Last-Touch** says: "Google Search gets all the credit" (because that's the last click)
+        - **Markov Chain** says: "Wait -- the customer only searched because they saw a TV ad first"
+        - TV typically gets **2-3x more credit** under Markov than Last-Touch
+        """)
+
+        if "markov_removal" in data:
+            st.subheader("Removal Effect: What Happens If We Remove Each Channel?")
+            removal_df = data["markov_removal"]
+            fig = px.bar(removal_df.sort_values("removal_effect", ascending=True),
+                         x="removal_effect", y="channel", orientation="h",
+                         color="removal_effect", color_continuous_scale="Reds",
+                         title="Conversion Drop When Channel Is Removed")
+            fig.update_layout(height=350, xaxis_title="Removal Effect", showlegend=False)
+            st.plotly_chart(fig, use_container_width=True)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if os.path.exists("results/markov_transition_heatmap.png"):
+                st.image("results/markov_transition_heatmap.png",
+                         caption="Transition Matrix: Probability of Moving Between Channels")
+        with col2:
+            if os.path.exists("results/markov_vs_lasttouch.png"):
+                st.image("results/markov_vs_lasttouch.png",
+                         caption="Markov vs Last-Touch: The Difference")
+
+        if os.path.exists("results/markov_removal_effects.png"):
+            st.image("results/markov_removal_effects.png",
+                     caption="Channel Removal Effects")
+    else:
+        st.info("Run `python src/markov_attribution.py` to generate results.")
 
 
 # ============================================
@@ -646,9 +711,9 @@ elif page == "geo_lift":
 # ============================================
 
 elif page == "comparison":
-    st.title("7-Model Comparison")
+    st.title("8-Model Comparison")
     st.markdown(
-        "All 7 advanced methods applied to the same data. Where models **agree** = higher "
+        "All 8 methods applied to the same data. Where models **agree** = higher "
         "confidence. Where they **disagree** = genuine methodological uncertainty."
     )
 
@@ -674,9 +739,10 @@ elif page == "comparison":
 
         st.subheader("Channel-Level Comparison")
         model_colors = {
-            "Bayesian MMM": "#8e44ad", "Shapley Values": "#2c3e50",
-            "DeepCausalMMM": "#e74c3c", "Double ML": "#2980b9",
-            "TFT Attention": "#27ae60", "Geo-Lift": "#e67e22", "Conformal": "#34495e",
+            "Bayesian MMM": "#8e44ad", "Markov Chain": "#2c3e50",
+            "Shapley Values": "#1abc9c", "DeepCausalMMM": "#e74c3c",
+            "Double ML": "#2980b9", "TFT Attention": "#27ae60",
+            "Geo-Lift": "#e67e22", "Conformal": "#34495e",
         }
         fig = go.Figure()
         for _, row in comp_df.iterrows():
@@ -721,207 +787,321 @@ elif page == "comparison":
 # ============================================
 
 elif page == "how_it_works":
-    st.title("How It Works: Model Methodology Guide")
-    st.markdown("In-depth explanations of all 7 models, the math behind them, "
-                "and why each one matters for 2025 marketing analytics.")
+    st.title("How It Works")
+    st.markdown(
+        "Every model explained in **plain English first**, then the technical details. "
+        "If you're new to ML, start with the analogies -- they're designed to build intuition."
+    )
 
     st.markdown("---")
-    st.header("1. Bayesian MMM with Causal DAG & Experiment Calibration")
 
-    with st.expander("Bayesian MMM (PyMC-Marketing / Google Meridian)", expanded=False):
+    # ---- MODEL 1 ----
+    st.header("1. Bayesian MMM")
+    st.markdown("*Question it answers: How much revenue does each ad channel drive?*")
+
+    with st.expander("Plain English", expanded=True):
         st.markdown("""
-**What it does:** Full Bayesian estimation of channel ROAS with posterior distributions,
-causal DAG identification, and experiment calibration.
+Imagine you run a lemonade stand and you advertise in three places: a sign on the
+street, flyers at school, and a radio ad. At the end of the month, you made $1,000.
+**How much of that $1,000 came from each type of advertising?**
 
-**The 3 innovations over standard MMM:**
+That's what Media Mix Modeling does. It looks at how much you spent on each channel
+each week, and how much revenue came in, and figures out the relationship.
 
-1. **Causal DAG Identification** (PyMC Labs, 2024):
-   When TV causally drives brand search, a naive model that estimates both simultaneously
-   produces biased results. The fix: specify a proper causal graph
-   `TV -> Search Volume -> Conversions` and model the TV->Search pathway explicitly.
+The **"Bayesian"** part means: instead of giving you ONE answer ("TV drives $300"),
+it gives you a RANGE: "TV drives somewhere between $200 and $400, most likely around $300."
+That range is called a **credible interval** and it honestly tells you how uncertain
+the estimate is.
 
-2. **Experiment Calibration** (Zhang et al., 2024):
-   Reparametrize MMM in terms of ROAS rather than regression coefficients. Calibrate
-   through saturation curves using geo-holdout lift test results. PyMC-Marketing implements
-   this for continuous refinement as more experiments run.
+The **"Causal DAG"** upgrade recognizes that TV ads make people Google your brand.
+If you don't account for this, you'll accidentally give Google credit for sales that
+TV actually started.
+        """)
 
-3. **Full Bayesian Inference** (MCMC):
-   Posterior distributions over ROAS: "TV Broadcast ROAS is 1.2x [0.8, 1.6] with 90% probability"
-   -- not just a point estimate.
-
-**Model:**
-```
-revenue ~ Normal(mu, sigma)
-mu = intercept + sum(beta_i * hill(adstock(spend_i))) + TV*Search_synergy + seasonality
-```
-
-**Priors:** HalfNormal on betas (positive), Beta on decays, Normal on synergy terms.
-MCMC: 2 chains x 2000 draws, NUTS sampler, target_accept=0.90.
+    with st.expander("The Technical Bit"):
+        st.markdown("""
+- **Adstock:** TV ad effect doesn't disappear instantly. `effect[t] = spend[t] + decay * effect[t-1]`
+- **Saturation:** Doubling your budget doesn't double results (diminishing returns). Modeled with Hill function.
+- **MCMC:** Markov Chain Monte Carlo sampling (PyMC/NUTS) draws thousands of plausible parameter values from the posterior distribution
+- **Causal DAG:** Explicitly models TV -> Brand Search mediation pathway to avoid over-crediting search
+- **Experiment calibration:** Anchors MMM estimates to real lift test results
         """)
 
     st.markdown("---")
-    st.header("2. Shapley Value Attribution")
 
-    with st.expander("Game-Theoretic Attribution (Exact Shapley + Interactions)", expanded=False):
+    # ---- MODEL 2 ----
+    st.header("2. Markov Chain Attribution")
+    st.markdown("*Question it answers: How do customers move through the ad journey?*")
+
+    with st.expander("Plain English", expanded=True):
         st.markdown("""
-**What it does:** Distributes total revenue across channels using Shapley values from
-cooperative game theory -- the ONLY method satisfying all 4 fairness axioms.
+Think of a customer's path to buying as a series of steps:
 
-**The 4 Axioms:**
-- **Efficiency:** Attribution sums to total value (no leakage)
-- **Symmetry:** Equal contributors get equal credit
-- **Linearity:** Attribution of a sum = sum of attributions
-- **Null Player:** Channels that contribute nothing get zero credit
+**See TV ad** -> **Google the brand** -> **Click a social ad** -> **Buy**
 
-**How it works:**
-1. For all 2^6 = 64 coalitions of 6 channels, train LightGBM to predict revenue
-2. Value function v(S) = R-squared of model using only channels in S
-3. Shapley value: phi_i = weighted average of marginal contributions across all orderings
+Last-touch attribution would give ALL the credit to social (the last step).
+But that's unfair -- the customer only Googled because they saw the TV ad first!
 
-**Shapley-Owen Interaction Index:**
-Measures pairwise synergies. For channels i,j:
-phi_ij = weighted average of [v(S+{i,j}) - v(S+{i}) - v(S+{j}) + v(S)]
-Positive = super-additive (TV + Search together > TV alone + Search alone)
+Markov chains model this as a **flow chart**. At each step, there's a probability of
+moving to the next channel, dropping off, or converting. The key insight is the
+**removal effect**: "If we completely removed TV from the flow chart, how many fewer
+people would reach 'Buy'?" That drop is TV's true contribution.
 
-**Asymmetric Shapley:** Respects causal ordering (TV fires first, then Search converts).
-Only considers orderings consistent with the causal graph.
+It's like asking: "What would happen if we removed a bridge from a road network?
+How much more traffic would get stuck?"
+        """)
+
+    with st.expander("The Technical Bit"):
+        st.markdown("""
+- **Transition matrix:** P[i,j] = probability of moving from channel i to channel j
+- **Absorbing states:** "Conversion" and "Drop-off" are terminal states
+- **Removal effect:** Set all transitions from channel i to "Drop-off", recompute conversion probability
+- The drop in conversion probability = that channel's contribution
+- Normalize removal effects across channels to get attribution shares
         """)
 
     st.markdown("---")
-    st.header("3. DeepCausalMMM")
 
-    with st.expander("Neural Adstock + DAG Structure Learning (2024/2025 Frontier)", expanded=False):
+    # ---- MODEL 3 ----
+    st.header("3. Shapley Value Attribution")
+    st.markdown("*Question it answers: What's the fairest way to split credit across channels?*")
+
+    with st.expander("Plain English", expanded=True):
         st.markdown("""
-**What it does:** Replaces hand-crafted adstock decay and saturation curves with
-neural networks that LEARN them from data. Simultaneously discovers the causal DAG
-between channels.
+Imagine 6 friends work on a group project and get a grade. How do you fairly decide
+who contributed how much? You could look at what each person added when they joined
+different team combinations:
 
-**Architecture:**
-1. **GRU Adstock:** One GRU cell per channel processes spend time series sequentially,
-   learning carry-over patterns. Output = adstocked representation.
-   (Replaces: geometric decay `x[t] = spend[t] + decay * x[t-1]`)
+- Alice working alone: B grade
+- Alice + Bob: B+ grade
+- Alice + Bob + Carol: A- grade
 
-2. **Learned Saturation:** 2-layer MLP per channel with sigmoid output learns the
-   diminishing-returns curve shape. (Replaces: Hill function with fixed alpha, K)
+The **Shapley value** considers EVERY possible team combination and averages out
+each person's marginal contribution. It's the only method mathematically proven to be
+"fair" -- it satisfies 4 axioms from game theory that no other method does.
 
-3. **NOTEARS DAG Learning** (Zheng et al., 2018): Learns 6x6 adjacency matrix W.
-   DAG constraint: `h(W) = trace(exp(W * W)) - d = 0` ensures acyclicity.
-   Discovered edges reveal which channels causally influence which.
+We do this with 6 marketing channels: try every possible combination (2^6 = 64 total),
+measure how well each combo predicts revenue, and compute each channel's average
+contribution across all combos.
+        """)
 
-4. **Output:** `revenue = sum(beta_i * saturated_i * dag_effective_i) + seasonality + trend`
-
-**Training Loss:** MSE + lambda_dag * h(W) + lambda_sparse * L1(W)
-Three-phase schedule: focus on fit -> ramp up DAG penalty -> full regularization.
-
-**Reference:** DeepCausalMMM package (arXiv 2024), tested on 190 DMAs, 109 weeks, 13 channels.
+    with st.expander("The Technical Bit"):
+        st.markdown("""
+- **Value function:** v(S) = R-squared of LightGBM model trained on only channels in coalition S
+- **Exact computation:** All 64 coalitions evaluated (tractable with 6 channels)
+- **4 axioms:** Efficiency (shares sum to total), Symmetry, Linearity, Null Player
+- **Interaction index:** Measures synergy -- do TV + Search together produce MORE than separately?
+- **Asymmetric Shapley:** Respects causal ordering (TV comes before Search in the journey)
         """)
 
     st.markdown("---")
-    st.header("4. Double Machine Learning (DML)")
 
-    with st.expander("Debiased Causal Effects (Chernozhukov et al., 2018)", expanded=False):
+    # ---- MODEL 4 ----
+    st.header("4. DeepCausalMMM")
+    st.markdown("*Question it answers: Can a neural network learn advertising effects that humans have to guess?*")
+
+    with st.expander("Plain English", expanded=True):
         st.markdown("""
-**The problem:** OLS conflates correlation with causation. If brands spend more on TV
-during Q4 when revenue is naturally high, OLS attributes seasonal revenue to TV.
+In traditional MMM, a human analyst has to decide things like:
+- "How quickly does a TV ad's effect fade?" (the decay rate)
+- "At what point does more spending stop helping?" (the saturation curve)
 
-**How DML fixes this:**
-1. **First stage (nuisance):** Use LightGBM to predict Y_hat = E[Revenue | Confounders]
-   and T_hat = E[Spend | Confounders]
-2. **Residualize:** Y_tilde = Y - Y_hat, T_tilde = T - T_hat
-3. **Second stage (causal):** Regress Y_tilde ~ T_tilde -> debiased ATE
+These are just guesses. What if we let a **neural network figure them out from the data**?
 
-**Cross-fitting:** K-fold to avoid overfitting bias. Train nuisance on fold k,
-predict on fold -k.
+That's DeepCausalMMM. It uses a type of neural network called a **GRU** (Gated Recurrent
+Unit) that's designed for time-series data. Instead of us telling it "TV ads decay by
+30% per week," the GRU watches the pattern of spend-and-revenue over time and learns
+the decay pattern itself.
 
-**CausalForest extension** (Athey & Imbens, 2018): Detects heterogeneous treatment
-effects by season. Does TV work differently in Q4 vs Q2?
+The **DAG structure learning** part is even cooler: the model automatically discovers
+which channels influence which. It might learn that "TV spending causes an increase in
+search volume" without us telling it to look for that.
 
-**Key output:** "Each $1 of TV Broadcast spend causally generates $X in revenue,
-controlling for all confounders, with p-value Y."
+Think of it as the difference between hand-drawing a map vs letting a drone survey the
+terrain and draw the map automatically.
+        """)
+
+    with st.expander("The Technical Bit"):
+        st.markdown("""
+- **GRU Adstock:** Replaces geometric decay with a learned recurrent transformation per channel
+- **Learned Saturation:** 2-layer MLP with sigmoid learns diminishing returns curve
+- **NOTEARS** (Zheng et al., 2018): Learns adjacency matrix W with DAG constraint `trace(e^(W*W)) = d`
+- **Loss:** MSE + DAG penalty + L1 sparsity on W
+- **Reference:** DeepCausalMMM (arXiv 2024), tested on 190 DMAs, 109 weeks, 13 channels
         """)
 
     st.markdown("---")
-    st.header("5. Temporal Fusion Transformer (TFT)")
 
-    with st.expander("Deep Learning Forecasting with Interpretability (Lim et al., 2021)", expanded=False):
+    # ---- MODEL 5 ----
+    st.header("5. Double Machine Learning (DML)")
+    st.markdown("*Question it answers: What's the TRUE causal effect of ad spend, removing all the noise?*")
+
+    with st.expander("Plain English", expanded=True):
         st.markdown("""
-**Architecture:**
-1. **Variable Selection Network (VSN):** Learns which input features matter via softmax
-   attention weights. Provides feature importance *learned* by the model.
-2. **LSTM Encoder:** Captures temporal dependencies in weekly observations
-3. **Multi-Head Attention:** Identifies which past weeks are most relevant
-4. **Quantile Outputs:** Predicts 10th, 50th, 90th percentiles for uncertainty
+Here's a trap that catches most analysts: TV ad spend goes up in December.
+Revenue also goes up in December (because of Christmas shopping). A simple
+model would say "TV ads caused the revenue increase!" -- but maybe people
+were going to buy anyway because of the holidays.
 
-**Why TFT for marketing:**
-- Handles multiple input features natively
-- Interpretable attention over past timesteps
-- Learns nonlinear feature interactions
-- Calibrated prediction intervals
+This is called **confounding** -- when a hidden factor (seasonality) affects
+both the cause (ad spend) and the effect (revenue), creating a fake correlation.
 
-**Caveat:** 52 weekly observations is insufficient. Real deployment needs 200+.
+**Double ML fixes this in two steps:**
+
+1. **Predict away the confounders:** Use a powerful ML model (LightGBM) to
+   predict what revenue WOULD have been based on seasonality alone, and what
+   ad spend WOULD have been based on seasonality alone.
+
+2. **Look at the leftovers:** The difference between actual and predicted is
+   the "surprise" part. If surprise-high-TV-spend weeks also have surprise-high-
+   revenue, THAT's the causal effect -- because the seasonal pattern was already
+   removed.
+
+It's like measuring if studying helps test scores, but first removing the effect
+of "some students are naturally smarter" -- you isolate the pure effect of studying.
+        """)
+
+    with st.expander("The Technical Bit"):
+        st.markdown("""
+- **Orthogonalization:** Y_tilde = Y - E[Y|X], T_tilde = T - E[T|X] (remove confounders)
+- **Cross-fitting:** K-fold to avoid overfitting bias
+- **ATE:** Average Treatment Effect = regression of Y_tilde on T_tilde
+- **CausalForest** (Athey & Imbens, 2018): Finds heterogeneous effects (does TV work differently by season?)
+- **Key advantage:** Valid p-values and confidence intervals even though ML was used
         """)
 
     st.markdown("---")
-    st.header("6. Conformal Prediction")
 
-    with st.expander("Distribution-Free Uncertainty (Vovk et al., 2005)", expanded=False):
+    # ---- MODEL 6 ----
+    st.header("6. Temporal Fusion Transformer (TFT)")
+    st.markdown("*Question it answers: Can deep learning forecast revenue from ad spend patterns?*")
+
+    with st.expander("Plain English", expanded=True):
         st.markdown("""
-**The guarantee:** If data is exchangeable, a (1-alpha) conformal prediction interval
-covers the true value with probability >= 1-alpha. Period. No distributional assumptions.
+You know how ChatGPT reads your whole message and pays more attention to the important
+words? **Transformers** use an "attention mechanism" that decides which parts of the
+input matter most.
 
-**Three methods:**
-1. **Split Conformal:** Train on 70%, calibrate residuals on 30%.
-   Interval = prediction +/- quantile(|residuals|). Simple but wastes data.
+TFT applies this to time series data. Given 52 weeks of ad spend and revenue, it:
 
-2. **Jackknife+:** K-fold cross-conformal. Coverage >= 1-2*alpha.
-   Uses all data for both training and calibration.
+1. **Picks which inputs matter** -- maybe Social spend is important but Display isn't.
+   It learns this automatically (Variable Selection Network).
 
-3. **CQR (Conformalized Quantile Regression):** Trains quantile regressors for bounds,
-   then calibrates with conformal scores. *Adaptive* intervals: wider when uncertain.
+2. **Looks at the past** -- similar to how you might look at "what happened last
+   Christmas" to predict this Christmas. The attention mechanism highlights which
+   past weeks are most relevant.
 
-**Why this matters:** Standard ML gives no reliability guarantee. Bayesian CI requires
-correct priors. Conformal just works.
+3. **Gives you uncertainty** -- instead of saying "revenue will be $800K," it says
+   "revenue will be between $700K and $900K, most likely $800K."
+
+**Honest caveat:** With only 52 weeks of data, this model overfits (memorizes the data
+rather than learning general patterns). It's here to demonstrate the architecture --
+real deployment needs 200+ weeks.
+        """)
+
+    with st.expander("The Technical Bit"):
+        st.markdown("""
+- **Variable Selection Network:** Softmax attention weights over inputs -> learned feature importance
+- **LSTM Encoder:** Captures sequential temporal dependencies
+- **Multi-Head Attention:** Identifies which past timesteps matter for each prediction
+- **Quantile outputs:** Predicts 10th, 50th, 90th percentiles (prediction intervals)
+- **Architecture:** Based on Google Research (Lim et al., 2021)
         """)
 
     st.markdown("---")
-    st.header("7. Geo-Lift / Synthetic Control")
 
-    with st.expander("Incrementality Testing (Abadie et al., 2010)", expanded=False):
+    # ---- MODEL 7 ----
+    st.header("7. Conformal Prediction")
+    st.markdown("*Question it answers: How confident should we actually be in our predictions?*")
+
+    with st.expander("Plain English", expanded=True):
         st.markdown("""
-**What it does:** The 'ground truth' for measuring ad effectiveness. Constructs a
-synthetic control from donor DMAs to estimate what would have happened without ads.
+Most ML models give you a prediction but don't tell you how reliable it is.
+Is "$800K predicted revenue" actually reliable? Could it be $600K or $1M?
 
-**How it works:**
-1. Select treatment DMA (highest spend ramp-up)
-2. Pre-period: find weights w_j for donor DMAs so synthetic matches treatment
-3. Post-period: causal lift = actual - synthetic counterfactual
-4. Placebo tests: run on control DMAs for falsification
+Conformal prediction wraps ANY model with a **guarantee**: "If I say the true value
+is between $700K and $900K, I'm right at least 90% of the time." No ifs, no buts.
 
-**Why this is the gold standard in 2025:**
-- A 2025 benchmarking study of 225 geo-based tests found median incremental ROAS
-  of 2.31x across channels, with CTV leading at 3.30x
-- Google GeoLift and Meta use this exact methodology
-- No parallel trends assumption needed (unlike diff-in-diff)
-- Haus builds "Causal MMM" -- MMM founded on incrementality experiments
+How? It looks at how wrong the model was on past data, and uses those errors to
+build prediction intervals. If the model was often wrong by +/- $100K, the interval
+will be about $200K wide.
+
+**Three flavors:**
+- **Split Conformal:** Simple. Train on 70%, measure errors on 30%, build intervals.
+- **Jackknife+:** Cleverer. Uses all the data through cross-validation.
+- **CQR:** Smartest. Makes wider intervals when the model is less sure, narrower
+  when it's confident. (Like how a weather forecast might say "definitely sunny"
+  for tomorrow but "50-80F, could rain" for next week.)
+        """)
+
+    with st.expander("The Technical Bit"):
+        st.markdown("""
+- **Guarantee:** Coverage >= 1-alpha under exchangeability (weaker than i.i.d.)
+- **Split Conformal:** interval = prediction +/- quantile(|residuals|, 1-alpha)
+- **Jackknife+:** K-fold cross-conformal, coverage >= 1-2*alpha
+- **CQR** (Conformalized Quantile Regression): adaptive intervals via calibrated quantile models
+- **Based on:** Vovk et al. (2005), Angelopoulos & Bates (2021)
         """)
 
     st.markdown("---")
-    st.header("The Triangulation Approach (2025 Industry Standard)")
+
+    # ---- MODEL 8 ----
+    st.header("8. Geo-Lift / Synthetic Control")
+    st.markdown("*Question it answers: If we turned off TV ads in one city, what would actually happen?*")
+
+    with st.expander("Plain English", expanded=True):
+        st.markdown("""
+All the other models use math to ESTIMATE the effect of ads. This one actually
+TESTS it -- or at least simulates a test.
+
+Imagine you have 8 cities. In City A, you run a big TV campaign. In the other 7 cities,
+you don't. At the end, City A's revenue went up 15%. But was that because of the TV ads,
+or would it have happened anyway?
+
+To find out, you build a **"synthetic City A"** -- a weighted mix of the other 7 cities
+that, before the campaign, tracked City A's revenue almost perfectly. If the synthetic
+version predicted $1M and City A actually made $1.15M, that extra $150K is the
+**causal lift** from TV ads.
+
+The beauty is the **placebo test**: run the same analysis pretending each control city
+is the treatment city. None of them should show an effect (because they didn't run
+the campaign). If City A's effect stands out from the placebos, you can be confident
+it's real.
+
+This is what Google and Meta actually use to measure ad effectiveness.
+        """)
+
+    with st.expander("The Technical Bit"):
+        st.markdown("""
+- **Synthetic control** (Abadie et al., 2010): weighted convex combination of donor units
+- **Constraints:** w_j >= 0, sum(w_j) = 1
+- **Causal lift:** actual - synthetic counterfactual in post-intervention period
+- **Placebo tests:** run on all control units for falsification
+- **2025 benchmark:** 225 geo-based tests found median iROAS of 2.31x, CTV at 3.30x
+        """)
+
+    st.markdown("---")
+
+    # ---- WHY 8 MODELS ----
+    st.header("Why Use 8 Models Instead of 1?")
     st.markdown("""
-The industry has converged on using **multiple methods together**:
+Each model answers a slightly different question and makes different assumptions.
+When they **agree**, you can be confident. When they **disagree**, that's where
+you need to investigate further.
 
-| Layer | Method | Purpose |
-|-------|--------|---------|
-| **Strategic Planning** | Bayesian MMM | Long-term budget allocation with uncertainty |
-| **Causal Ground Truth** | Geo-Lift / Incrementality | Validate MMM estimates with experiments |
-| **Fair Attribution** | Shapley Values | Game-theoretically fair credit allocation |
-| **Frontier** | DeepCausalMMM | Let neural nets learn what we currently hand-specify |
-| **Debiased Effects** | Double ML | Control for confounding in observational data |
-| **Uncertainty** | Conformal Prediction | Guaranteed prediction intervals |
-| **Forecasting** | TFT | Deep learning with interpretable attention |
+| Model | Best For | Think of it as... |
+|-------|----------|-------------------|
+| **Bayesian MMM** | Budget planning | "How should we allocate next quarter's budget?" |
+| **Markov Chains** | Understanding the journey | "How do customers flow from TV to purchase?" |
+| **Shapley Values** | Fair credit | "Who deserves the bonus?" (mathematically fair) |
+| **DeepCausalMMM** | Letting data speak | "What if we let AI figure out the ad effects?" |
+| **Double ML** | Removing bias | "What's the REAL effect after removing seasonal noise?" |
+| **TFT** | Forecasting | "What will revenue be next month given this spend plan?" |
+| **Conformal** | Honest uncertainty | "How wide should our error bars actually be?" |
+| **Geo-Lift** | Ground truth | "Let's actually run an experiment and measure it" |
 
-**No single model is trusted alone.** Use disagreement between methods as a signal
-for where to invest in better measurement.
+The industry calls this **triangulation** -- using multiple independent methods to
+converge on the truth, rather than trusting any single model.
     """)
 
     st.markdown("---")

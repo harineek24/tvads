@@ -39,7 +39,8 @@ CHANNEL_COLORS = {
 
 MODEL_COLORS = {
     'Bayesian MMM': '#8e44ad',
-    'Shapley Values': '#2c3e50',
+    'Markov Chain': '#2c3e50',
+    'Shapley Values': '#1abc9c',
     'DeepCausalMMM': '#e74c3c',
     'Double ML': '#2980b9',
     'TFT Attention': '#27ae60',
@@ -52,9 +53,10 @@ STANDARD_CHANNELS = ['TV Broadcast', 'TV Cable', 'TV Streaming',
 
 
 def load_all_results():
-    """Load results from all 7 model pipelines."""
+    """Load results from all model pipelines."""
     print("  Loading results from all models...")
     results = {}
+    ws = pd.read_csv('data/weekly_spend.csv')
 
     # 1. Bayesian MMM contributions
     if os.path.exists('data/bayesian_channel_contributions.csv'):
@@ -67,7 +69,34 @@ def load_all_results():
         results['Bayesian MMM'] = bayes_dict
         print(f"    Bayesian MMM: {len(bayes_dict)} channels")
 
-    # 2. Shapley Value Attribution
+    # 2. Markov Chain Attribution
+    if os.path.exists('data/markov_attribution.csv'):
+        markov = pd.read_csv('data/markov_attribution.csv')
+        markov_raw = dict(zip(markov['channel'], markov['markov_attribution']))
+        # Map Markov channel names to standard names
+        markov_channel_map = {
+            'TV': None,  # Will be split across TV sub-channels
+            'Paid_Search': 'Paid Search', 'Paid Search': 'Paid Search',
+            'Social': 'Social', 'Display': 'Display',
+            'Organic_Search': None, 'Direct': None,  # No match in standard channels
+        }
+        markov_dict = {}
+        tv_share = markov_raw.get('TV', 0)
+        if tv_share > 0:
+            # Split TV across sub-channels proportionally to spend
+            tv_spend = ws[['tv_broadcast_spend', 'tv_cable_spend', 'tv_streaming_spend']].sum()
+            tv_total = tv_spend.sum()
+            if tv_total > 0:
+                markov_dict['TV Broadcast'] = tv_share * tv_spend['tv_broadcast_spend'] / tv_total
+                markov_dict['TV Cable'] = tv_share * tv_spend['tv_cable_spend'] / tv_total
+                markov_dict['TV Streaming'] = tv_share * tv_spend['tv_streaming_spend'] / tv_total
+        for raw_name, std_name in markov_channel_map.items():
+            if std_name and raw_name in markov_raw:
+                markov_dict[std_name] = markov_raw[raw_name]
+        results['Markov Chain'] = markov_dict
+        print(f"    Markov Chain: {len(markov_dict)} channels")
+
+    # 3. Shapley Value Attribution
     if os.path.exists('data/shapley_values.csv'):
         shapley = pd.read_csv('data/shapley_values.csv')
         # Detect column name (could be 'channel', 'channel_name', etc.)
@@ -224,7 +253,7 @@ def generate_comparison_plots(comparison_df):
     ax.set_yticks(range(n_models))
     ax.set_yticklabels(models, fontsize=11)
     ax.set_xlabel('Attribution Share', fontsize=12)
-    ax.set_title('7-Model Comparison: How Each Method Attributes Revenue\n'
+    ax.set_title('8-Model Comparison: How Each Method Attributes Revenue\n'
                  '(same data, different methodology — triangulate for best estimate)',
                  fontweight='bold', fontsize=13)
     ax.legend(loc='lower right', ncol=3, fontsize=9, framealpha=0.9)
@@ -233,6 +262,7 @@ def generate_comparison_plots(comparison_df):
 
     model_types = {
         'Bayesian MMM': 'Bayesian + Causal DAG',
+        'Markov Chain': 'Customer Journey',
         'Shapley Values': 'Game Theory',
         'DeepCausalMMM': 'Neural + DAG',
         'Double ML': 'Causal Inference',
@@ -266,7 +296,7 @@ def generate_comparison_plots(comparison_df):
     ax.set_xticks(x)
     ax.set_xticklabels(active_channels, fontsize=11)
     ax.set_ylabel('Attribution Share', fontsize=12)
-    ax.set_title('Channel Attribution Across 7 Advanced Methods',
+    ax.set_title('Channel Attribution Across 8 Methods',
                  fontweight='bold', fontsize=13)
     ax.legend(loc='upper right', fontsize=7, ncol=2)
     ax.grid(True, alpha=0.3, axis='y')
@@ -345,7 +375,7 @@ def main():
     os.makedirs('results', exist_ok=True)
 
     print("=" * 60)
-    print("STACKED MODEL COMPARISON (7 ADVANCED MODELS)")
+    print("STACKED MODEL COMPARISON (8 MODELS)")
     print("=" * 60)
 
     results = load_all_results()
