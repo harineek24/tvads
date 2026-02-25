@@ -845,15 +845,15 @@ with tab5:
         "point estimates."
     )
 
-    if 'bayesian_roas' in data:
-        roas_df = data['bayesian_roas']
+    if 'bayesian_contributions' in data:
+        bc = data['bayesian_contributions']
 
         # Posterior ROAS metrics with credible intervals
         st.subheader("Posterior ROAS by Channel (90% Credible Intervals)")
-        roas_cols = st.columns(len(roas_df))
-        for i, (_, row) in enumerate(roas_df.iterrows()):
+        roas_cols = st.columns(len(bc))
+        for i, (_, row) in enumerate(bc.iterrows()):
             with roas_cols[i]:
-                ci_text = f"[{row['ci_5']:.2f}, {row['ci_95']:.2f}]"
+                ci_text = f"[{row['roas_ci_5']:.2f}, {row['roas_ci_95']:.2f}]"
                 st.metric(
                     row['channel'],
                     f"{row['median_roas']:.2f}x",
@@ -863,32 +863,31 @@ with tab5:
 
         # Posterior ROAS forest plot
         st.subheader("Posterior ROAS Distributions")
-        if 'bayesian_roas' in data:
-            roas_df_sorted = roas_df.sort_values('median_roas', ascending=True)
-            fig = go.Figure()
-            for _, row in roas_df_sorted.iterrows():
-                fig.add_trace(go.Scatter(
-                    x=[row['ci_5'], row['median_roas'], row['ci_95']],
-                    y=[row['channel']] * 3,
-                    mode='markers+lines',
-                    marker=dict(size=[8, 14, 8], color=['gray', '#8e44ad', 'gray']),
-                    line=dict(color='#8e44ad', width=3),
-                    name=row['channel'],
-                    showlegend=False,
-                    hovertemplate=(
-                        f"<b>{row['channel']}</b><br>"
-                        f"Median: {row['median_roas']:.2f}x<br>"
-                        f"90% CI: [{row['ci_5']:.2f}, {row['ci_95']:.2f}]"
-                    ),
-                ))
-            fig.add_vline(x=1.0, line_dash='dash', line_color='red',
-                          annotation_text='Break-even (1.0x)')
-            fig.update_layout(
-                title='Posterior ROAS with 90% Credible Intervals',
-                xaxis_title='ROAS',
-                height=350,
-            )
-            st.plotly_chart(fig, use_container_width=True)
+        bc_sorted = bc.sort_values('median_roas', ascending=True)
+        fig = go.Figure()
+        for _, row in bc_sorted.iterrows():
+            fig.add_trace(go.Scatter(
+                x=[row['roas_ci_5'], row['median_roas'], row['roas_ci_95']],
+                y=[row['channel']] * 3,
+                mode='markers+lines',
+                marker=dict(size=[8, 14, 8], color=['gray', '#8e44ad', 'gray']),
+                line=dict(color='#8e44ad', width=3),
+                name=row['channel'],
+                showlegend=False,
+                hovertemplate=(
+                    f"<b>{row['channel']}</b><br>"
+                    f"Median: {row['median_roas']:.2f}x<br>"
+                    f"90% CI: [{row['roas_ci_5']:.2f}, {row['roas_ci_95']:.2f}]"
+                ),
+            ))
+        fig.add_vline(x=1.0, line_dash='dash', line_color='red',
+                      annotation_text='Break-even (1.0x)')
+        fig.update_layout(
+            title='Posterior ROAS with 90% Credible Intervals',
+            xaxis_title='ROAS',
+            height=350,
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
         col1, col2 = st.columns(2)
         with col1:
@@ -901,19 +900,17 @@ with tab5:
                          caption='Forest Plot: Credible Intervals')
 
         # Bayesian contributions comparison
-        if 'bayesian_contributions' in data:
-            st.subheader("Bayesian Channel Contributions")
-            bc = data['bayesian_contributions']
-            fig = px.bar(
-                bc.sort_values('median_contribution', ascending=True),
-                x='median_contribution', y='channel', orientation='h',
-                color='channel',
-                color_discrete_map=CHANNEL_COLORS,
-                title='Bayesian MMM: Median Channel Revenue Contributions'
-            )
-            fig.update_layout(height=350, showlegend=False,
-                              xaxis_title='Revenue Contribution ($)')
-            st.plotly_chart(fig, use_container_width=True)
+        st.subheader("Bayesian Channel Contributions")
+        fig = px.bar(
+            bc.sort_values('median_contribution', ascending=True),
+            x='median_contribution', y='channel', orientation='h',
+            color='channel',
+            color_discrete_map=CHANNEL_COLORS,
+            title='Bayesian MMM: Median Channel Revenue Contributions'
+        )
+        fig.update_layout(height=350, showlegend=False,
+                          xaxis_title='Revenue Contribution ($)')
+        st.plotly_chart(fig, use_container_width=True)
 
         if os.path.exists('results/bayesian_posterior_predictive.png'):
             st.image('results/bayesian_posterior_predictive.png',
@@ -935,6 +932,7 @@ with tab5:
 
     else:
         st.info("Run `python src/bayesian_mmm.py` to generate Bayesian MMM results.")
+
 
 
 # ============================================
