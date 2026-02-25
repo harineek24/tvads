@@ -1,0 +1,81 @@
+{
+  "model": "DeepCausalMMM",
+  "description": "GRU Adstock + Learned Saturation + DAG Structure Learning",
+  "data": {
+    "n_weeks": 52,
+    "n_train": 41,
+    "n_test": 11,
+    "n_channels": 6
+  },
+  "architecture": {
+    "gru_hidden_size": 8,
+    "saturation_hidden_size": 8,
+    "total_parameters": 1844,
+    "trainable_parameters": 1844
+  },
+  "training": {
+    "n_epochs": 1000,
+    "learning_rate": 0.003,
+    "lambda_dag": 1.0,
+    "lambda_sparse": 0.05,
+    "final_mse": 0.15132366120815277,
+    "final_dag_penalty": 5.1021575927734375e-05,
+    "final_l1_penalty": 1.189968466758728
+  },
+  "metrics": {
+    "train_r2": 0.8450354337692261,
+    "train_mae": 21577.279296875,
+    "train_mape_pct": 2.7450711727142334,
+    "test_r2": -0.2953425645828247,
+    "test_mae": 40422.375,
+    "test_mape_pct": 4.650940895080566
+  },
+  "causal_edges": [
+    {
+      "from": "TV Streaming",
+      "to": "Social",
+      "weight": -0.07780694216489792
+    },
+    {
+      "from": "TV Streaming",
+      "to": "TV Broadcast",
+      "weight": -0.07571253925561905
+    },
+    {
+      "from": "TV Streaming",
+      "to": "TV Cable",
+      "weight": -0.07459349930286407
+    },
+    {
+      "from": "TV Streaming",
+      "to": "Paid Search",
+      "weight": -0.07458554953336716
+    },
+    {
+      "from": "TV Streaming",
+      "to": "Display",
+      "weight": -0.07410252839326859
+    },
+    {
+      "from": "TV Broadcast",
+      "to": "Social",
+      "weight": -0.051777541637420654
+    }
+  ],
+  "n_causal_edges": 6,
+  "channel_roas": {
+    "TV Broadcast": 0.0533,
+    "TV Cable": 0.0157,
+    "TV Streaming": 3.0074,
+    "Paid Search": -0.0616,
+    "Social": -0.091,
+    "Display": -0.1258
+  },
+  "notes": [
+    "With only 52 weeks of data, the neural model will likely overfit on training data.",
+    "The learned DAG and adstock patterns are still interpretable and useful.",
+    "DAG penalty h(W) should approach 0 for a valid acyclic graph.",
+    "GRU adstock captures more flexible carry-over patterns than geometric decay.",
+    "The learned saturation MLP adapts to each channel's specific diminishing returns shape."
+  ]
+}

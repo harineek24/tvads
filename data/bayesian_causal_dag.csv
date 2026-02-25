@@ -1,0 +1,5 @@
+source,target,label,coefficient,r2,significant
+TV Broadcast,Paid Search,TV Broadcast → Paid Search,-0.0006428024794620533,8.760302150356836e-08,False
+TV Cable,Paid Search,TV Cable → Paid Search,-0.0006292834969811598,8.562341968776366e-08,False
+TV Broadcast,Social,TV Broadcast → Social,2007.9178457583557,0.7304567027271434,True
+TV Streaming,Paid Search,TV Streaming → Paid Search,-0.00013998861880059818,3.663591174873915e-08,False

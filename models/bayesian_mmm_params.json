@@ -7,5 +7,19 @@
     "Social": 0.6000000000000002,
     "Display": 0.1
   },
-  "revenue_scale": 786316.2223076922
+  "revenue_scale": 786316.2223076922,
+  "n_chains": 2,
+  "n_draws": 2000,
+  "n_tune": 1500,
+  "divergences": 75,
+  "causal_dag": {
+    "mediation_pct": 100.0,
+    "tv_search_synergy_median": -0.029290054595826655,
+    "tv_social_synergy_median": 0.013395724807899793,
+    "n_significant_edges": 1
+  },
+  "calibration": {
+    "n_within_ci": 6,
+    "n_channels": 6
+  }
 }

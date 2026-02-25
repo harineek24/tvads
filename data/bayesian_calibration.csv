@@ -1,0 +1,7 @@
+channel,mmm_roas_median,mmm_roas_ci5,mmm_roas_ci95,experiment_roas,calibration_factor,calibrated_roas,within_ci,experiment_se
+TV Broadcast,1.62,0.265,4.845,1.58,0.975,1.596,True,0.261
+TV Cable,0.994,0.065,5.522,1.073,1.079,1.041,True,0.198
+TV Streaming,5.491,0.532,20.077,2.066,0.376,3.436,True,0.333
+Paid Search,3.453,0.585,9.521,3.568,1.033,3.522,True,0.504
+Social,2.002,0.233,7.808,1.485,0.742,1.692,True,0.279
+Display,2.627,0.512,11.021,0.814,0.31,1.539,True,0.153

@@ -1,0 +1,51 @@
+{
+  "method": "Shapley Value Attribution (Game Theory)",
+  "total_coalitions_evaluated": 64,
+  "channels": 6,
+  "value_function": "LightGBM R-squared (100 trees, max_depth=4)",
+  "v_empty_coalition": 0.7286469289235213,
+  "v_grand_coalition": 0.7397135634040599,
+  "exact_shapley_values": {
+    "TV Broadcast": 0.002538,
+    "TV Cable": 0.002549,
+    "TV Streaming": 0.002099,
+    "Paid Search": 0.000227,
+    "Social": 0.001479,
+    "Display": 0.002175
+  },
+  "exact_shapley_pct": {
+    "TV Broadcast": 22.93,
+    "TV Cable": 23.03,
+    "TV Streaming": 18.97,
+    "Paid Search": 2.05,
+    "Social": 13.36,
+    "Display": 19.66
+  },
+  "proportional_attribution_pct": {
+    "TV Broadcast": 29.37,
+    "TV Cable": 19.06,
+    "TV Streaming": 5.22,
+    "Paid Search": 20.82,
+    "Social": 15.58,
+    "Display": 9.95
+  },
+  "key_findings": {
+    "strongest_pairwise_synergy": {
+      "pair": [
+        "TV Broadcast",
+        "Social"
+      ],
+      "interaction_index": 0.001505
+    },
+    "tv_search_synergy": -0.000245,
+    "total_tv_shapley_share_pct": 64.93,
+    "causal_ordering_used": [
+      "TV Broadcast",
+      "TV Cable",
+      "TV Streaming",
+      "Social",
+      "Paid Search",
+      "Display"
+    ]
+  }
+}
